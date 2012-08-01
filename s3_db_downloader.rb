@@ -36,7 +36,7 @@ s3_bucket_files.each do |file|
   # print '.'
 end
 
-puts ""
+puts "Found values:"
 puts file_path
 puts file_etag
 puts file_size
@@ -45,7 +45,7 @@ file_path ||= s3_bucket_files.last.key
 file_etag ||= s3_bucket_files.last.about['etag'].gsub('"','')
 file_size ||= s3_bucket_files.last.about['content-length'].to_i
 
-puts ""
+puts "Default values:"
 puts file_path
 puts file_etag
 puts file_size
@@ -84,6 +84,8 @@ if File.exists?(file_name) && downloaded_digest == file_etag
 
   puts "------------ Restoring database #{config['mysql']['database']} ------------"
   system "mysql -hlocalhost -u#{config['mysql']['user']} -p#{config['mysql']['password']} #{config['mysql']['database']} < #{Dir.getwd}/sql_backup/MySQL/olook_production.sql"
+else
+  puts "Checksum does not match. Moving on."
 end
 
 puts "Ready!"
