@@ -7,16 +7,14 @@ require 'digest/md5'
 
 config = YAML::load(File.open('aws_s3.yml'))
 
- AWS::S3::Base.establish_connection!(
-    :access_key_id     => config["s3"]["access_key_id"],
-    :secret_access_key => config["s3"]["secret_access_key"]
- )
-
-s3_date_format = Time.now.year.to_s + "." + '%02d' % Time.now.month + "." + '%02d' % Time.now.day
-pattern = /\/sql_backup\/#{s3_date_format}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}\/sql_backup.tar.bz2/
+AWS::S3::Base.establish_connection!(
+  :access_key_id     => config["s3"]["access_key_id"],
+  :secret_access_key => config["s3"]["secret_access_key"]
+)
 
 file_name = 'sql_backup.tar.bz2'
 file_date = Time.now - 15 * 24 * 60 * 60
+file_path, file_etag, file_size = ''
 
 s3_bucket_files = AWS::S3::Bucket.find('olook_sql_backups').object_cache
 s3_bucket_files.each do |file|
@@ -24,22 +22,21 @@ s3_bucket_files.each do |file|
     if file.key =~ /\/#{file_name}\Z/
       current_date = Time.parse(file.about['last-modified'].split(',')[1].gsub('GMT',''))
       if current_date > file_date
-        file_path = file.key
         file_date = current_date
-        file_etag = file.about['etag'].gsub('\"','')
+        file_path = file.key
+        file_etag = file.about['etag'].gsub('"','')
         file_size = file.about['content-length'].to_i
       end
     end
   rescue
 
   end
-  # print '.'
 end
 
-puts "Found values:"
-puts file_path
-puts file_etag
-puts file_size
+puts "Found values:" if file_path || file_etag || file_size
+puts file_path if file_path
+puts file_etag if file_etag
+puts file_size if file_size
 
 file_path ||= s3_bucket_files.last.key
 file_etag ||= s3_bucket_files.last.about['etag'].gsub('"','')
@@ -49,9 +46,6 @@ puts "Default values:"
 puts file_path
 puts file_etag
 puts file_size
-
-# s3_bucket_files = AWS::S3::Bucket.find('olook_sql_backups').object_cache.inspect
-# file_path = s3_bucket_files.match(pattern,s3_bucket_files.rindex("#")).to_s
 
 if File.exists?(file_name)
   downloaded_digest = Digest::MD5.file(file_name)
@@ -83,7 +77,9 @@ if File.exists?(file_name) && downloaded_digest == file_etag
   system "tar -xvf #{file_name}"
 
   puts "------------ Restoring database #{config['mysql']['database']} ------------"
-  system "mysql -hlocalhost -u#{config['mysql']['user']} -p#{config['mysql']['password']} #{config['mysql']['database']} < #{Dir.getwd}/sql_backup/MySQL/olook_production.sql"
+  if system "mysql -hlocalhost -u#{config['mysql']['user']} -p#{config['mysql']['password']} #{config['mysql']['database']} < #{Dir.getwd}/sql_backup/MySQL/olook_production.sql"
+    system "mv #{file_name} sql_backup-#{file_etag}.tar.bz2"
+  end
 else
   puts "Checksum does not match. Moving on."
 end
