@@ -56,9 +56,12 @@ if File.exists?(file_name)
     system "rm -R sql_backup"
     system "rm #{file_name}"
   end
+elsif File.exists?("sql_#{file_etag}.tar.bz2")
+  # file_name = "sql_#{file_etag}.tar.bz2"
+  downloaded_digest = Digest::MD5.file("sql_#{file_etag}.tar.bz2")
 end
 
-if !File.exists?(file_name) || downloaded_digest != file_etag
+if !File.exists?(file_name) && !File.exists?("sql_#{file_etag}.tar.bz2") || downloaded_digest != file_etag
   puts "------------ Downloading last dump #{file_path} from Amazon S3. Be patient ! ------------"
   open(file_name, 'w') do |file|
     AWS::S3::S3Object.stream(file_path, 'olook_sql_backups') do |chunk|
@@ -78,7 +81,7 @@ if File.exists?(file_name) && downloaded_digest == file_etag
 
   puts "------------ Restoring database #{config['mysql']['database']} ------------"
   if system "mysql -hlocalhost -u#{config['mysql']['user']} -p#{config['mysql']['password']} #{config['mysql']['database']} < #{Dir.getwd}/sql_backup/MySQL/olook_production.sql"
-    system "mv #{file_name} sql_backup-#{file_etag}.tar.bz2"
+    system "mv #{file_name} sql_#{file_etag}.tar.bz2"
   end
 else
   puts "Checksum does not match. Moving on."
