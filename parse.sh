@@ -11,8 +11,3 @@ mkdir sql_backup/databases/toobig/
 mv sql_backup/databases/cart* sql_backup/databases/toobig
 mv sql_backup/databases/events* sql_backup/databases/toobig
 
-cd sql_backup/databases/
-for f in *.tsv; do
-  mysql -uroot olook_development -e "load data local infile '$f' replace into table $(echo $f | sed 's/.tsv//g');" -vvv;
-done
-
