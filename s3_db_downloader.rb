@@ -73,8 +73,10 @@ if !File.exists?(file_name) && !File.exists?("sql_#{file_etag}.tar") || download
 end
 
 if File.exists?(file_name) && downloaded_digest == file_etag
-  puts "------------ Descompressing file ------------"
+  puts "------------ Untar the file  ------------"
   system "tar -xvf #{file_name}"
+  puts "------------ Descompressing file ------------"
+  system "bzip2 -d sql_backup/databases/MySQL.sql.bz2"
 else
   puts "Checksum does not match. Moving on.\nUncompress for yourself and check if you can still continue"
 end
