@@ -6,4 +6,4 @@ Util for downloading dumps from S3 and restoring on local databases
 Instalation
 ============
 
-gem install aws-s3
+gem install fog
